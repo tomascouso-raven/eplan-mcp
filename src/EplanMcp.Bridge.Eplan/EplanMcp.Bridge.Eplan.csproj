@@ -15,7 +15,19 @@
     <TargetFramework>net481</TargetFramework>
     <RootNamespace>EplanMcp.Bridge.Eplan</RootNamespace>
     <Version>0.7.0</Version>
+    <_VersionDispatch>Adapters\Api\ApiTryDispatch.Eplan$(EplanVersion).g.cs</_VersionDispatch>
   </PropertyGroup>
+
+  <!--
+    The generated API dispatcher of this EPLAN version (eng/coverage generate; ApiTryGenerator.VersionDispatches):
+    ApiTryDispatch.Eplan<year>.g.cs is rendered from that version's catalog and replaces ApiTryDispatch.g.cs, which is
+    rendered from the default catalog. A version without its own file compiles the default one.
+  -->
+  <ItemGroup>
+    <Compile Remove="Adapters\Api\ApiTryDispatch.Eplan*.g.cs" />
+    <Compile Remove="Adapters\Api\ApiTryDispatch.g.cs" Condition="Exists('$(_VersionDispatch)')" />
+    <Compile Include="$(_VersionDispatch)" Condition="Exists('$(_VersionDispatch)')" />
+  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\potential-definition.ema" />
