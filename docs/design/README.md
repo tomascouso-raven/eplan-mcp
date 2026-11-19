@@ -32,3 +32,4 @@
 | [2026-11-12-m4b-layout3d.md](2026-11-12-m4b-layout3d.md) | M4b 第一批：柜体 3D 布置工具 | Implemented |
 | [2026-11-14-api-closeout-list.md](2026-11-14-api-closeout-list.md) | 操作层“到不了”的结案清单 | Accepted |
 | [2026-11-15-operation-layer-full-review.md](2026-11-15-operation-layer-full-review.md) | 操作层 4014 组全面复查与全量实机验证 | 进行中 |
+| [2026-11-19-per-version-bridge-builds.md](2026-11-19-per-version-bridge-builds.md) | One Bridge build per EPLAN version (2025 and 2026) | Proposed |
