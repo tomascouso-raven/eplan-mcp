@@ -96,6 +96,26 @@ public sealed class AddinCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_WithPerVersionBuilds_RegistersEachVersionsBuild_AndRefusesAVersionWithoutOne()
+    {
+        File.Delete(Dll + ZoneMark.Stream);
+        File.Delete(Dll);
+        string build2026 = Path.Combine(App, "bridge", "net481", "eplan2026", "EplanMcp.Bridge.Eplan.dll");
+        Directory.CreateDirectory(Path.GetDirectoryName(build2026)!);
+        File.WriteAllText(build2026, "add-in");
+        InstallEplan("2025.0.3", "Electric P8");
+
+        AddinReport report = await Command.InstallAsync(["Electric P8"]);
+
+        Assert.Equal(build2026, report.Dll);
+        Assert.Equal([$"start {Eplan2026} /Variant:\"Electric P8\" EplApiModuleAction /register:\"{build2026}\"", "close 4000"], _eplan.Log);
+        AddinResult refused = Assert.Single(report.Results, r => r.Version == "2025.0.3.1");
+        Assert.Equal((AddinOutcome.Refused, AddinProblem.AddinNotFound), (refused.Outcome, refused.Problem?.Problem));
+        Assert.Contains(Path.Combine("eplan2025", "EplanMcp.Bridge.Eplan.dll"), refused.Problem!.Detail, StringComparison.Ordinal);
+        Assert.Equal(AddinOutcome.Registered, Assert.Single(report.Results, r => r.Version == "2026.0.3.1").Outcome);
+    }
+
+    [Fact]
     public async Task Install_RemovesTheDownloadMarkFromEveryFileOfTheAddinFirst()
     {
         string other = Path.Combine(App, "bridge", "net481", "sub", "EplanMcp.Contracts.dll");

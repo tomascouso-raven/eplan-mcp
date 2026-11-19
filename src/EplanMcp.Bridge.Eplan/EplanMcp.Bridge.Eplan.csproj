@@ -15,6 +15,13 @@
     <TargetFramework>net481</TargetFramework>
     <RootNamespace>EplanMcp.Bridge.Eplan</RootNamespace>
     <Version>1.1.0</Version>
+    <!--
+      One output folder per EPLAN version, bin\<configuration>\net481\eplan<year>\, so that builds for two versions do
+      not overwrite each other; the Host looks there first (AddinLocation). obj is split the same way.
+    -->
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\$(Configuration)\$(TargetFramework)\eplan$(EplanVersion)\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\$(TargetFramework)\eplan$(EplanVersion)\</IntermediateOutputPath>
     <_VersionDispatch>Adapters\Api\ApiTryDispatch.Eplan$(EplanVersion).g.cs</_VersionDispatch>
   </PropertyGroup>
 

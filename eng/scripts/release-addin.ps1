@@ -100,7 +100,7 @@ try {
     New-Item -ItemType Directory -Path $bridge -Force | Out-Null
     # Explicit allowlist: never redistribute EPLAN reference assemblies, Newtonsoft.Json, projects or test logs.
     foreach ($assembly in 'EplanMcp.Bridge.Eplan', 'EplanMcp.Bridge.Core', 'EplanMcp.Contracts') {
-        Copy-Item "src/EplanMcp.Bridge.Eplan/bin/Release/net481/$assembly.dll" $bridge
+        Copy-Item "src/EplanMcp.Bridge.Eplan/bin/Release/net481/eplan2026/$assembly.dll" $bridge
     }
     $tools = Join-Path $worktree '.local/tools'
     dotnet tool install CycloneDX --version 6.0.0 --tool-path $tools
