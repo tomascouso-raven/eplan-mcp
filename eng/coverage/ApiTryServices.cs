@@ -33,8 +33,8 @@ internal static class ApiTryServices
     internal static Dictionary<string, Service> Load(string root)
     {
         Dictionary<string, Service> services = Build(
-            [.. Lines(Path.Combine(root, "catalog/eplan-2026.0.3/types.jsonl"))],
-            [.. _namespaces.SelectMany(ns => Lines(Path.Combine(root, "catalog/eplan-2026.0.3/members/" + ns + ".jsonl")))]);
+            [.. Lines(Path.Combine(root, CatalogFolder.Relative + "/types.jsonl"))],
+            [.. _namespaces.SelectMany(ns => Lines(Path.Combine(root, CatalogFolder.Relative + "/members/" + ns + ".jsonl")))]);
         services[PartsManagement] = new(false, null);
         // Read-only path settings (Articles, Macros, Symbols ...); ProjectManager.Paths would expose project open and remove.
         services[PathInfo] = new(true, null);

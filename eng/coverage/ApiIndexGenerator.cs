@@ -14,14 +14,14 @@ internal static class ApiIndexGenerator
 
     internal static string Render(string root) => Encode(Data(root));
     internal static ApiIndexData Data(string root) =>
-        RunCache.Get(root, () => DataCore(root));
+        RunCache.Get(CatalogFolder.CacheScope + root, () => DataCore(root));
 
     private static ApiIndexData DataCore(string root)
     {
         // Trial selection depends on this index; only the outer report computes reachability.
         CoverageReport report = CoverageReport.Build(root, includeReachability: false);
         ToolMapping mapping = ToolMapping.Build(root);
-        string directory = Path.Combine(root, report.Catalog);
+        string directory = Path.Combine(root, CatalogFolder.Override ?? report.Catalog);
         ApiCatalog catalog = ApiCatalog.Load(directory);
         if (!report.SdkCatalog)
         {

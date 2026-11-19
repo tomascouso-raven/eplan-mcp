@@ -68,11 +68,11 @@ internal static partial class ApiTryGenerator
         return new(types, reachable, members);
     }
     private static HandleModel Handles(string root) =>
-        RunCache.Get(root, () => HandlesCore(root));
+        RunCache.Get(CatalogFolder.CacheScope + root, () => HandlesCore(root));
 
     private static HandleModel HandlesCore(string root)
     {
-        string typesFile = Path.Combine(root, "catalog/eplan-2026.0.3/types.jsonl");
+        string typesFile = Path.Combine(root, CatalogFolder.Relative + "/types.jsonl");
         HandleModel model = BuildHandles(Data(root), [.. (File.Exists(typesFile) ? File.ReadLines(typesFile) : []).Select(l => JsonSerializer.Deserialize<JsonElement>(l))], ObjectKindGenerator.Kinds(root), Enums(root), ApiTryServices.Load(root));
         var entries = EntrySelected(EntryData(root));
         return model with { Members = [.. model.Members.Where(s => !entries.Any(e => e.Entry.Row.Group == s.Entry.Row.Group && Names(e.Member) == Names(s.Member)))] };

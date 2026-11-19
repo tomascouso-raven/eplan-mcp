@@ -56,9 +56,10 @@ internal sealed class BridgeUsage
         IEnumerable<string> files = BridgeCompilation.SourceFiles(Path.Combine(src, "EplanMcp.Bridge.Eplan"))
             .Concat(BridgeCompilation.SourceFiles(Path.Combine(src, "EplanMcp.Bridge.Core")))
             .Append(Path.Combine(src, "EplanMcp.Contracts", "OperationNames.cs"))
-            // The trial dispatch table is derived from the catalog and checked by check itself; regenerating it does
-            // not make the scan stale.
+            // The trial dispatch tables (the default one and one per other EPLAN version) are derived from the catalogs
+            // and checked by check itself; regenerating them does not make the scan stale.
             .Where(f => !Path.GetRelativePath(repositoryRoot, f).Replace('\\', '/').Equals(ApiTryGenerator.DispatchPath, StringComparison.Ordinal)
+                && !ApiTryGenerator.VersionDispatches.Any(v => Path.GetRelativePath(repositoryRoot, f).Replace('\\', '/').Equals(v.Path, StringComparison.Ordinal))
                 && !Path.GetRelativePath(repositoryRoot, f).Replace('\\', '/').Equals(ObjectKindGenerator.DispatchPath, StringComparison.Ordinal));
         var text = new StringBuilder();
         foreach (string file in files.Select(f => Path.GetRelativePath(repositoryRoot, f).Replace('\\', '/')).Order(StringComparer.Ordinal))

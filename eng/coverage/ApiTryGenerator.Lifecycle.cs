@@ -63,7 +63,7 @@ internal static partial class ApiTryGenerator
     }
     internal static ApiIndexData WithLifecycleFactories(string root, ApiIndexData data)
     {
-        string directory = Path.Combine(root, "catalog/eplan-2026.0.3");
+        string directory = Path.Combine(root, CatalogFolder.Relative);
         if (!File.Exists(Path.Combine(directory, "types.jsonl")))
         { return data; }
         JsonElement[] types = [.. File.ReadLines(Path.Combine(directory, "types.jsonl")).Select(l => JsonSerializer.Deserialize<JsonElement>(l))];
