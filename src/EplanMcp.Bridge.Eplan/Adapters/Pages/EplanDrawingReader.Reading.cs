@@ -309,7 +309,25 @@ internal sealed partial class EplanDrawingReader
             { RectangleD area = device.GetLogicalArea(); return new[] { area.LowerLeft, area.UpperRight }.SelectMany(XY).ToArray(); }
             if (placement is LocationBox box)
             { RectangleD area = box.GetLogicalArea(); return new[] { area.LowerLeft, area.UpperRight }.SelectMany(XY).ToArray(); }
-            return (placement is PropertyPlacement p ? p.GetBoundingBox(false) : placement.GetBoundingBox()).SelectMany(XY).ToArray();
+            if (placement is PropertyPlacement p)
+            { return PropertyOutline(p).SelectMany(XY).ToArray(); }
+            return placement.GetBoundingBox().SelectMany(XY).ToArray();
+        }
+
+        /// <summary>
+        /// A property text's outline in page coordinates. A87: <c>GetBoundingBox(false)</c> is absolute, the default
+        /// <c>GetBoundingBox()</c> is relative to the owner. EPLAN 2025 has only the default one (catalog/eplan-2025.0.3),
+        /// so there the owner's location is added, as <see cref="ReadLocation"/> does for the location. A87 verified the
+        /// sum on context property texts in 2026; on 2025 it is not verified live yet.
+        /// </summary>
+        private static PointD[] PropertyOutline(PropertyPlacement placement)
+        {
+#if EPLAN2026_OR_GREATER
+            return placement.GetBoundingBox(false);
+#else
+            PointD origin = placement.Parent is Placement owner ? owner.Location : new PointD(0, 0);
+            return [.. placement.GetBoundingBox().Select(corner => new PointD(corner.X + origin.X, corner.Y + origin.Y))];
+#endif
         }
 
         private Dictionary<string, string?> ReadGraphics(Placement placement, out string? imagePath)

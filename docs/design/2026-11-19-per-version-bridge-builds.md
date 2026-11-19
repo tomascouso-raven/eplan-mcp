@@ -153,3 +153,20 @@ Nothing that only 2025 has is used, so the 2025 build needs no 2025-only code pa
 - Deviation from section 4, step 3: `ApiTryCatalog.g.cs` is not changed. The 2025 dispatcher has no case for a 2026-only member, so on 2025 such a call reaches the dispatcher's existing `default:` branch ("No compiled method for this signature."). Mapping that to `CAPABILITY_MISSING` is left for later; it needs the Host to know the running EPLAN version.
 - `EplanMcp.Bridge.Eplan.csproj` compiles `ApiTryDispatch.Eplan<EplanVersion>.g.cs` instead of `ApiTryDispatch.g.cs` when that file exists.
 - Results: `generate` leaves every existing derived file byte-for-byte unchanged and adds the 2025 dispatcher (3.7 MB, against 4.8 MB for 2026); `check` passes. Building the Bridge for 2025 now fails only on the three hand-written members of phase 0 (the fourth, `Connection3Ds`, compiles). Coverage tests: all pass except the 34 that start `pwsh`, which is not installed on this machine; new tests in `CatalogFolderTests` and `CoverageCheckTests.Generate_WithoutTheCatalogOfAnotherVersion_WritesNoDispatcherForIt`.
+
+### Phase 3 (2026-11-20)
+
+| File | Change |
+|---|---|
+| `Adapters/Runtime/EplanPaths.cs` | The run-time `MissingMethodException` fallback is replaced by `#if EPLAN2026_OR_GREATER`; before 2026 it calls `SubstitutePath(String)`, so the project's own path variables stay unresolved, as before on 2025 |
+| `Adapters/Pages/EplanDrawingReader.Reading.cs` | New `PropertyOutline`: `GetBoundingBox(false)` (absolute) on 2026; on 2025 the relative `GetBoundingBox()` plus the owner's location, the sum A87 measured on 2026 for context property texts. Not verified live on 2025 |
+| `Adapters/MasterData/EplanPartsDatabaseWriter.cs` | `replace_and_append` on 2025 fails with `CAPABILITY_MISSING` before the database is opened; the other three modes are unchanged |
+| `Adapters/Connections/EplanConnectionRouter.cs` | No code change. On 2025, `target.Connection3Ds` binds to the inherited `Placement3D.Connection3Ds`, which may list fewer connections than 2026's `InstallationSpace.Connection3Ds`; documented in the class comment, to be checked in phase 5 |
+
+`tests/EplanMcp.Bridge.Core.Tests` links `EplanPaths.cs` and the drawing reader against its fake EPLAN API, which follows 2026; the project now defines the 2026 symbols itself, without importing `eng/EplanApi.props` (that looks for an EPLAN installation, which CI lacks).
+
+Results:
+
+- `dotnet build src\EplanMcp.Bridge.Eplan -c Release -p:EplanVersion=2025`: succeeds with no warnings (warnings are errors in this repository).
+- `tests/EplanMcp.Bridge.Core.Tests`: 5,962 of 5,967 pass. The 5 failures are in `PageExportRoundFourTests` and come from the machine's culture (es-ES, decimal comma), not from this change: with `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1` all 30 tests of that class pass. A separate issue for the maintainer.
+- The default 2026 build is not compiled here (no EPLAN 2026 on this machine); the `#if EPLAN2026_OR_GREATER` branches are the previous code.

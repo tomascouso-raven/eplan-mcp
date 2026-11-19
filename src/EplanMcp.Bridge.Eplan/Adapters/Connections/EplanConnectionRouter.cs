@@ -11,6 +11,11 @@ namespace EplanMcp.Bridge.Eplan.Adapters;
 /// Reads and routes the 3D connections of one installation space as SampleRouteCheckTests did on the sample (api-notes
 /// A141): <c>InstallationSpace.Connection3Ds</c>, path lengths from <c>RoutePoints</c>, and
 /// <c>ConnectionService3D.RouteConnections</c>, which gave the sample's lengths again. Main thread.
+/// <para>
+/// EPLAN 2025 has no <c>InstallationSpace.Connection3Ds</c> (catalog/eplan-2025.0.3): built for 2025, the same code
+/// binds to the inherited <c>Placement3D.Connection3Ds</c>, which may list only the space's own connections. Not
+/// verified live on 2025 (docs/design/2026-11-19-per-version-bridge-builds.md, phase 5).
+/// </para>
 /// </summary>
 internal sealed class EplanConnectionRouter : IConnectionRouter
 {

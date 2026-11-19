@@ -66,7 +66,13 @@ internal sealed class EplanPartsDatabaseWriter : IPartsDatabaseWriter
         {
             "update_existing" => MDPartsDatabase.ImportMode.UpdateExistingRecords,
             "update_and_append" => MDPartsDatabase.ImportMode.UpdateAndAppend,
+#if EPLAN2026_OR_GREATER
             "replace_and_append" => MDPartsDatabase.ImportMode.ReplaceAndAppend,
+#else
+            // ImportMode has no ReplaceAndAppend before EPLAN 2026 (catalog/eplan-2025.0.3); refused before anything opens.
+            "replace_and_append" => throw new BridgeErrorException(ErrorReason.CapabilityMissing,
+                "replace_and_append needs EPLAN 2026 or later; this EPLAN offers append_new, update_existing and update_and_append."),
+#endif
             _ => MDPartsDatabase.ImportMode.AppendNewRecords,
         };
         MDPartsDatabase.ImportIdentifier identifier = matchBy switch
