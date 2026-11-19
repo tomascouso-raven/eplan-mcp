@@ -28,8 +28,8 @@ internal static class AddinTexts
         return issue.Problem switch
         {
             AddinProblem.AddinNotFound => zh
-                ? $"没有找到插件，没有注册任何变体。找过：{d}。安装版的插件在 eplanmcp.exe 旁的 bridge\\net481\\ 中；开发时先用与 eplanmcp 相同的配置构建 src\\EplanMcp.Bridge.Eplan"
-                : $"The add-in was not found, so nothing was registered. Looked for: {d}. An installed add-in is in bridge\\net481\\ next to eplanmcp.exe; in development, build src\\EplanMcp.Bridge.Eplan in the configuration of eplanmcp first",
+                ? $"没有找到插件，没有注册任何变体。找过：{d}。安装版的插件在 eplanmcp.exe 旁的 bridge\\net481\\eplan<年份>\\ 或 bridge\\net481\\ 中；开发时先用与 eplanmcp 相同的配置构建 src\\EplanMcp.Bridge.Eplan（-p:EplanVersion=<年份>）"
+                : $"The add-in was not found, so nothing was registered. Looked for: {d}. An installed add-in is in bridge\\net481\\eplan<year>\\ or bridge\\net481\\ next to eplanmcp.exe; in development, build src\\EplanMcp.Bridge.Eplan in the configuration of eplanmcp first, with -p:EplanVersion=<year>",
             AddinProblem.NoEplan => zh
                 ? $"在 {d} 下没有找到支持范围 {EplanVersions.Range} 内装有变体的 EPLAN，没有注册任何变体{(issue.Installed is { } found ? $"（找到的版本：{found.Replace(", ", "、", StringComparison.Ordinal)}）" : string.Empty)}"
                 : $"No EPLAN in the supported range {EplanVersions.Range} with an installed variant under {d}, so nothing was registered{(issue.Installed is { } versions ? $" (versions found: {versions})" : string.Empty)}",

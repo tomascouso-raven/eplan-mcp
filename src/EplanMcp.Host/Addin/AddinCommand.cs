@@ -69,18 +69,20 @@ internal sealed class AddinCommand
 
     internal async Task<AddinReport> InstallAsync(IReadOnlyList<string> variants, Action<AddinAction, AddinResult>? starting = null)
     {
-        if (AddinLocation.Find(_machine.HostDirectory, out IReadOnlyList<string> searched) is not { } addin)
+        if (!AddinLocation.Any(_machine.HostDirectory, out IReadOnlyList<string> searched))
         {
             return new(AddinAction.Install, null, new(AddinProblem.AddinNotFound, string.Join("; ", searched)), []);
         }
 
+        // Reported until the EPLAN versions are known: the single build of earlier releases, if there is one.
+        string? reported = AddinLocation.Find(_machine.HostDirectory, null, out _)?.Dll;
         try
         {
             _record.All(); // registering what cannot be recorded would leave it for nobody to undo
         }
         catch (Exception ex) when (ex is AddinException or IOException or UnauthorizedAccessException)
         {
-            return new(AddinAction.Install, addin.Dll, Unreadable(ex), []);
+            return new(AddinAction.Install, reported, Unreadable(ex), []);
         }
 
         // In installation order: a version outside the range as one skipped line, else each chosen installed variant.
@@ -99,18 +101,30 @@ internal sealed class AddinCommand
         {
             string installed = string.Join(", ", installations.Where(i => EplanVersions.Support(i.Version) != EplanSupport.Unsupported)
                 .SelectMany(i => i.Variants).Distinct(StringComparer.OrdinalIgnoreCase));
-            return new(AddinAction.Install, addin.Dll, missing.Length > 0
+            return new(AddinAction.Install, reported, missing.Length > 0
                 ? new(AddinProblem.VariantNotFound, string.Join(", ", missing), installed.Length > 0 ? installed : null)
                 : new(AddinProblem.NoEplan, Path.Combine(_machine.ProgramFiles, "EPLAN"), installations.Count > 0 ? string.Join(", ", installations.Select(i => i.Version)) : null), []);
         }
 
+        // The build for each installation's EPLAN version; never another version's build.
+        var builds = new Dictionary<string, (AddinLocation? Addin, IReadOnlyList<string> Searched)>(StringComparer.OrdinalIgnoreCase);
+        foreach (EplanInstallation installation in plan.Where(p => p.Variant is not null).Select(p => p.Installation).Distinct())
+        {
+            AddinLocation? build = AddinLocation.Find(_machine.HostDirectory, installation.Version, out IReadOnlyList<string> looked);
+            builds[installation.Exe] = (build, looked);
+        }
+
+        reported = builds.Values.Select(b => b.Addin?.Dll).FirstOrDefault(d => d is not null) ?? reported;
         try
         {
-            ZoneMark.RemoveAll(addin.UnblockFolder);
+            foreach (string folder in builds.Values.Select(b => b.Addin?.UnblockFolder).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                ZoneMark.RemoveAll(folder);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new(AddinAction.Install, addin.Dll, new(AddinProblem.UnblockFailed, ex.Message), []);
+            return new(AddinAction.Install, reported, new(AddinProblem.UnblockFailed, ex.Message), []);
         }
 
         var results = new List<AddinResult>();
@@ -118,10 +132,13 @@ internal sealed class AddinCommand
         {
             results.Add(variant is null
                 ? new(installation.Exe, installation.Version, null, AddinOutcome.Skipped) { Notes = [AddinNote.UnsupportedVersion] }
-                : await RegisterAsync(installation, variant, addin.Dll, starting).ConfigureAwait(false));
+                : builds[installation.Exe] is { Addin: { } build }
+                    ? await RegisterAsync(installation, variant, build.Dll, starting).ConfigureAwait(false)
+                    : new(installation.Exe, installation.Version, variant, AddinOutcome.Refused)
+                    { Problem = new(AddinProblem.AddinNotFound, string.Join("; ", builds[installation.Exe].Searched)) });
         }
 
-        return new(AddinAction.Install, addin.Dll, null, results);
+        return new(AddinAction.Install, reported, null, results);
     }
 
     internal async Task<AddinReport> UninstallAsync(Action<AddinAction, AddinResult>? starting = null)
