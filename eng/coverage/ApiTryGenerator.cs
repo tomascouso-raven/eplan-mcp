@@ -9,8 +9,17 @@ internal static partial class ApiTryGenerator
     internal const string CatalogPath = "src/EplanMcp.Contracts/Generated/ApiTryCatalog.g.cs";
     internal const string DispatchPath = "src/EplanMcp.Bridge.Eplan/Adapters/Api/ApiTryDispatch.g.cs";
     internal const string ReportPath = "catalog/api-try.g.tsv";
+    /// <summary>
+    /// The dispatcher of each add-in build for an EPLAN version other than the default catalog's, rendered from that
+    /// version's catalog (docs/design/2026-11-19-per-version-bridge-builds.md, phase 2). The add-in project compiles the
+    /// one for its EplanVersion instead of <see cref="DispatchPath"/>.
+    /// </summary>
+    internal static readonly (string Path, string Catalog)[] VersionDispatches =
+    [
+        ("src/EplanMcp.Bridge.Eplan/Adapters/Api/ApiTryDispatch.Eplan2025.g.cs", "catalog/eplan-2025.0.3"),
+    ];
     private static ApiIndexData Data(string root) =>
-        RunCache.Get("try|" + root, () => DataCore(root));
+        RunCache.Get(CatalogFolder.CacheScope + "try|" + root, () => DataCore(root));
 
     private static ApiIndexData DataCore(string root)
     {
@@ -34,7 +43,7 @@ internal static partial class ApiTryGenerator
     /// </summary>
     private static Dictionary<string, string[]> Enums(string root)
     {
-        string File2(string name) => Path.Combine(root, "catalog/eplan-2026.0.3/" + name);
+        string File2(string name) => Path.Combine(root, CatalogFolder.Relative + "/" + name);
         IEnumerable<JsonElement> Read(string name) => File.Exists(File2(name))
             ? File.ReadLines(File2(name)).Select(l => JsonSerializer.Deserialize<JsonElement>(l)) : [];
         Dictionary<string, string[]> dictionary = Read("data-dictionary.jsonl")

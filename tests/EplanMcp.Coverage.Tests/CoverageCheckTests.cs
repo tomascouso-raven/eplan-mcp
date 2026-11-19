@@ -37,6 +37,20 @@ public sealed class CoverageCheckTests : IDisposable
     }
 
     [Fact]
+    public void Generate_WithoutTheCatalogOfAnotherVersion_WritesNoDispatcherForIt()
+    {
+        List<string> written = CoverageCheck.Generate(_repository.Root);
+
+        Assert.Contains(ApiTryGenerator.DispatchPath, written);
+        Assert.All(ApiTryGenerator.VersionDispatches, v =>
+        {
+            Assert.DoesNotContain(v.Path, written);
+            Assert.False(File.Exists(Path.Combine(_repository.Root, v.Path)));
+        });
+        Assert.Empty(CoverageCheck.Problems(_repository.Root));
+    }
+
+    [Fact]
     public void Check_ADerivedFileThatDoesNotMatch_FailsWithTheGenerateCommand()
     {
         CoverageCheck.Generate(_repository.Root);

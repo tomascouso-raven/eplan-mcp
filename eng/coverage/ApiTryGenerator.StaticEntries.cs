@@ -30,13 +30,13 @@ internal static partial class ApiTryGenerator
         && !t.TryGetProperty("excluded", out _) && !t.TryGetProperty("access", out _)
         && (!t.TryGetProperty("outer", out JsonElement outer) || PublicEntryType(outer.GetString()![2..], types));
     private static EntryModel EntryData(string root) =>
-        RunCache.Get(root, () => EntryDataCore(root));
+        RunCache.Get(CatalogFolder.CacheScope + root, () => EntryDataCore(root));
 
     private static EntryModel EntryDataCore(string root)
     {
         ApiIndexData data = Data(root);
         Dictionary<string, string[]> kinds = ObjectKindGenerator.Kinds(root);
-        string typesFile = Path.Combine(root, "catalog/eplan-2026.0.3/types.jsonl");
+        string typesFile = Path.Combine(root, CatalogFolder.Relative + "/types.jsonl");
         // Test repositories hold no catalogue, like Enums and ObjectKindGenerator.Load expect.
         var types = (File.Exists(typesFile) ? File.ReadLines(typesFile) : []).Select(l => JsonSerializer.Deserialize<JsonElement>(l)).ToDictionary(t => t.GetProperty("id").GetString()![2..], StringComparer.Ordinal);
         return new(data, kinds, Enums(root), EntryPaths(data, kinds, types, ChainFields(root)), types);

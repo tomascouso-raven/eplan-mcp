@@ -27,6 +27,7 @@ internal static class CoverageCheck
         (ApiIndexGenerator.RelativePath, ApiIndexGenerator.Render),
         (ApiTryGenerator.CatalogPath, ApiTryGenerator.Catalog),
         (ApiTryGenerator.DispatchPath, ApiTryGenerator.Dispatch),
+        .. ApiTryGenerator.VersionDispatches.Select(v => (v.Path, (Func<string, string>)(root => CatalogFolder.With(v.Catalog, () => ApiTryGenerator.Dispatch(root))))),
         (ApiTryGenerator.ReportPath, ApiTryGenerator.Report),
         ("catalog/mapping/operation-gaps.g.tsv", root => ApiTryGenerator.ChainGapReport(root)),
         ("catalog/mapping/operation-gaps-before-chains.g.tsv", root => ApiTryGenerator.ChainGapReport(root, true)),
@@ -36,6 +37,13 @@ internal static class CoverageCheck
         (ObjectKindGenerator.TablePath, ObjectKindGenerator.Table),
         (VerificationImport.WhitelistPath, VerificationImport.Whitelist),
     ];
+
+    /// <summary>
+    /// <see cref="Generated"/> without the dispatcher of a version whose catalog folder the repository lacks, such as
+    /// the small repositories of the tests.
+    /// </summary>
+    private static IEnumerable<(string Path, Func<string, string> Content)> GeneratedFor(string repositoryRoot) => Generated
+        .Where(g => ApiTryGenerator.VersionDispatches.All(v => v.Path != g.Path || Directory.Exists(Path.Combine(repositoryRoot, v.Catalog))));
 
     /// <summary>Writes every derived file, wrappers first, removes generated files no longer selected; returns the paths written.</summary>
     public static List<string> Generate(string repositoryRoot)
@@ -49,12 +57,12 @@ internal static class CoverageCheck
             Write(repositoryRoot, path, content);
         }
 
-        foreach ((string path, Func<string, string> content) in Generated)
+        foreach ((string path, Func<string, string> content) in GeneratedFor(repositoryRoot))
         {
             Write(repositoryRoot, path, content(repositoryRoot));
         }
 
-        return [.. wrappers.Keys, .. Generated.Select(g => g.Path)];
+        return [.. wrappers.Keys, .. GeneratedFor(repositoryRoot).Select(g => g.Path)];
     }
 
     /// <summary>The committed scan, or null when there is none.</summary>
@@ -90,7 +98,7 @@ internal static class CoverageCheck
             return [.. wrapperProblems, $"{ApiTotals.RelativePath} is missing; restore the installation totals before generating coverage."];
         }
 
-        return [.. wrapperProblems, .. Generated
+        return [.. wrapperProblems, .. GeneratedFor(repositoryRoot)
             .Where(g => !Matches(repositoryRoot, g.Path, g.Content(repositoryRoot)))
             .Select(g => $"{g.Path} does not match its inputs (tools, specs, tests, api-notes, the scan, catalog/mapping/overlay.yaml or the catalog changed). Run, no EPLAN needed: {GenerateCommand}")];
     }

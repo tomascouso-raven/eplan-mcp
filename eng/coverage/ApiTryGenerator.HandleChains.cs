@@ -140,11 +140,11 @@ internal static partial class ApiTryGenerator
         return call;
     }
     private static IEnumerable<JsonElement> ChainLines(string path) => File.Exists(path) ? File.ReadLines(path).Select(l => JsonSerializer.Deserialize<JsonElement>(l)) : [];
-    private static JsonElement[] ChainTypes(string root) => [.. ChainLines(Path.Combine(root, "catalog/eplan-2026.0.3/types.jsonl"))];
+    private static JsonElement[] ChainTypes(string root) => [.. ChainLines(Path.Combine(root, CatalogFolder.Relative + "/types.jsonl"))];
     /// <summary>The catalogue's field members, which ADR-0055 reads as handle sources.</summary>
     internal static JsonElement[] ChainFields(string root) =>
         [.. ChainMemberFiles(root).SelectMany(ChainLines).Where(m => m.TryGetProperty("kind", out JsonElement k) && k.GetString() == "field")];
-    private static IEnumerable<string> ChainMemberFiles(string root) => Directory.Exists(Path.Combine(root, "catalog/eplan-2026.0.3/members")) ? Directory.EnumerateFiles(Path.Combine(root, "catalog/eplan-2026.0.3/members"), "*.jsonl").Order(StringComparer.Ordinal) : [];
+    private static IEnumerable<string> ChainMemberFiles(string root) => Directory.Exists(Path.Combine(root, CatalogFolder.Relative + "/members")) ? Directory.EnumerateFiles(Path.Combine(root, CatalogFolder.Relative + "/members"), "*.jsonl").Order(StringComparer.Ordinal) : [];
     private static (ApiIndexData Data, JsonElement[] Types, Dictionary<string, string[]> Kinds, Dictionary<string, string[]> Enums, Dictionary<string, ApiTryServices.Service> Services) ChainInputs(string root) =>
         (Data(root), ChainTypes(root), ObjectKindGenerator.Kinds(root), Enums(root), ApiTryServices.Load(root));
     private static (ApiEntry Entry, string Reason, string Detail)[] ChainGaps(string root, bool before)
