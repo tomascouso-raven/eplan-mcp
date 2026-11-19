@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Test-only reader and rollback probe; no fault injection is exposed through production operations. -->
+  <Import Project="..\..\eng\EplanApi.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net481</TargetFramework>
     <IsPackable>false</IsPackable>
-    <EplanBinPath Condition="'$(EplanBinPath)' == ''">C:\Program Files\EPLAN\Platform\2026.0.3\Bin</EplanBinPath>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\EplanMcp.Bridge.Eplan\EplanMcp.Bridge.Eplan.csproj" />
