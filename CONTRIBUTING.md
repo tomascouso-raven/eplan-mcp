@@ -73,6 +73,8 @@ Bridge 的 [`BannedSymbols.txt`](src/EplanMcp.Bridge.Eplan/BannedSymbols.txt) �
 
 [`EplanMcp.Bridge.Eplan.csproj`](src/EplanMcp.Bridge.Eplan/EplanMcp.Bridge.Eplan.csproj) 从 `EplanBinPath` 引用本机 EPLAN DLL，引用的 `Private=false`；`EplanVersion` 默认是 `2026`。`ValidateEplanApiReferences` 检查目录、各 DLL 是否存在以及文件主版本是否匹配，只读版本资源，不将 DLL 加载进构建进程。指定其他安装时使用 `-p:EplanBinPath=<Bin目录>`，年份不同时同时使用 `-p:EplanVersion=<年份>`。
 
+Per-version builds ([design note](docs/design/2026-11-19-per-version-bridge-builds.md)): `EplanVersion` and `EplanBinPath` are defined once in [`eng/EplanApi.props`](eng/EplanApi.props), which the add-in, the offline host and the Large test helpers import. Without `-p:EplanBinPath`, the Bin folder is the single `<Program Files>\EPLAN\Platform\<EplanVersion>.*` installation; none or several fail the build with a message. The props define `EPLAN<year>` and `EPLAN<year>_OR_GREATER` (2024–2027) for code that differs between versions, for example `dotnet build src\EplanMcp.Bridge.Eplan -c Release -p:EplanVersion=2025`.
+
 Bridge 对 Newtonsoft.Json 的编译引用为 `ExcludeAssets="runtime"`、`PrivateAssets="all"`，运行时使用 EPLAN 自带版本；源码 polyfill 包不增加运行时程序集。实际包版本见中央包配置，同进程程序集情况见 [B1](docs/eplan/api-notes/environment-and-licensing.md#b1-程序集与目标框架)。
 
 ## 测试入口

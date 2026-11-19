@@ -138,3 +138,10 @@ Of the 2,374 used IDs, 2,372 are used only by generated code (`ApiTryDispatch.g.
 The first three match the compiler errors of section 1. The fourth compiled against 2025, so the call binds to a member of the same name that 2025 has elsewhere in the hierarchy; to be confirmed in phase 3, since the bound member may behave differently.
 
 Nothing that only 2025 has is used, so the 2025 build needs no 2025-only code paths.
+
+### Phase 1 (2026-11-19)
+
+- `eng/EplanApi.props` defines `EplanVersion` (default 2026), the default `EplanBinPath` and the compilation symbols. The add-in, the offline host and the three Large helpers import it instead of each hard-coding `...\Platform\2026.0.3\Bin`.
+- The default Bin folder is the single `<Program Files>\EPLAN\Platform\<EplanVersion>.*` folder, so 2026.0.3 on the maintainer's machine resolves to the same path as before. None or several installations fail with a message that names `-p:EplanBinPath`.
+- Symbols, checked with `dotnet msbuild -getProperty:DefineConstants`: version 2025 gives `EPLAN2025;EPLAN2024_OR_GREATER;EPLAN2025_OR_GREATER`; version 2026 adds `EPLAN2026_OR_GREATER` and has `EPLAN2026` instead of `EPLAN2025`.
+- Deviation from section 4: the per-version output folder (step 3) moves to phase 4, together with `AddinLocation`, which reads that folder. Moving it now would break add-in registration from a development build until phase 4.

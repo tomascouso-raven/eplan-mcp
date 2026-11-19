@@ -1,0 +1,37 @@
+<Project>
+  <!--
+    The EPLAN version a project that compiles against the EPLAN API is built for, shared by the add-in, the offline host
+    and the Large test helpers (docs/design/2026-11-19-per-version-bridge-builds.md). Imported at the top of those
+    projects, before they reference $(EplanBinPath).
+
+    EplanVersion: the EPLAN version year, default 2026. Another version: -p:EplanVersion=<year>.
+    EplanBinPath: the Bin folder of an EPLAN installation of that version. Default: the single folder
+    <Program Files>\EPLAN\Platform\<EplanVersion>.*\Bin; with none or several, pass -p:EplanBinPath=<Bin folder>.
+    The add-in's ValidateEplanApiReferences target checks that the assemblies there are from EplanVersion.
+
+    Compilation symbols, for code that differs between versions (#if EPLAN2026_OR_GREATER):
+    EPLAN<year> for the version built, and EPLAN<year>_OR_GREATER for every version of the supported range
+    (ADR-0009: 2024-2027) up to and including it.
+  -->
+  <PropertyGroup>
+    <EplanVersion Condition="'$(EplanVersion)' == ''">2026</EplanVersion>
+    <_EplanPlatformRoot>$(ProgramW6432)\EPLAN\Platform</_EplanPlatformRoot>
+    <_EplanPlatformRoot Condition="'$(ProgramW6432)' == ''">C:\Program Files\EPLAN\Platform</_EplanPlatformRoot>
+    <_EplanPlatformFolders Condition="'$(EplanBinPath)' == '' And Exists('$(_EplanPlatformRoot)')">$([System.IO.Directory]::GetDirectories('$(_EplanPlatformRoot)', '$(EplanVersion).*'))</_EplanPlatformFolders>
+    <EplanBinPath Condition="'$(EplanBinPath)' == '' And '$(_EplanPlatformFolders)' != '' And !$(_EplanPlatformFolders.Contains(';'))">$(_EplanPlatformFolders)\Bin</EplanBinPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(EplanVersion)', '^\d{4}$'))">
+    <DefineConstants>$(DefineConstants);EPLAN$(EplanVersion)</DefineConstants>
+    <DefineConstants Condition="$(EplanVersion) &gt;= 2024">$(DefineConstants);EPLAN2024_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="$(EplanVersion) &gt;= 2025">$(DefineConstants);EPLAN2025_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="$(EplanVersion) &gt;= 2026">$(DefineConstants);EPLAN2026_OR_GREATER</DefineConstants>
+    <DefineConstants Condition="$(EplanVersion) &gt;= 2027">$(DefineConstants);EPLAN2027_OR_GREATER</DefineConstants>
+  </PropertyGroup>
+
+  <Target Name="ValidateEplanBinPath" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(EplanVersion)', '^\d{4}$'))" Text="EplanVersion must be the EPLAN version year, for example 2026, but is '$(EplanVersion)'." />
+    <Error Condition="'$(EplanBinPath)' == '' And $(_EplanPlatformFolders.Contains(';'))" Text="Several EPLAN $(EplanVersion) installations under '$(_EplanPlatformRoot)': $(_EplanPlatformFolders). Pass -p:EplanBinPath=&lt;Bin folder of one of them&gt;." />
+    <Error Condition="'$(EplanBinPath)' == ''" Text="No EPLAN $(EplanVersion) installation under '$(_EplanPlatformRoot)'. Install EPLAN $(EplanVersion), or pass -p:EplanBinPath=&lt;Bin folder of an EPLAN $(EplanVersion) installation&gt;." />
+  </Target>
+</Project>
