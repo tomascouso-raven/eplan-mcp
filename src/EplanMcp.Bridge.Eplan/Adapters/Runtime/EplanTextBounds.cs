@@ -1,41 +1,28 @@
-using System.Runtime.CompilerServices;
 using Eplan.EplApi.Base;
 using Eplan.EplApi.DataModel.Graphics;
 
 namespace EplanMcp.Bridge.Eplan.Adapters;
 
 /// <summary>
-/// The outline of a property text. <c>PropertyPlacement.GetBoundingBox(Boolean)</c> exists from EPLAN 2026; the 2025
-/// API documents only <c>GetBoundingBox()</c> (eplan.help API pages for 2025 and 2026, read 2026-11-19; found by a
-/// build against the 2025.0.3 assemblies reported in asckye/eplan-mcp#664).
+/// The outline of a property text in page coordinates. <c>PropertyPlacement.GetBoundingBox(Boolean)</c> exists from
+/// EPLAN 2026; the 2025 API has only <c>GetBoundingBox()</c> (catalog/eplan-2025.0.3; found by a build against the
+/// 2025.0.3 assemblies reported in asckye/eplan-mcp#664). Each EPLAN version has its own add-in build
+/// (docs/design/2026-11-19-per-version-bridge-builds.md), so the overload is chosen at compile time.
 /// </summary>
 internal static class EplanTextBounds
 {
-    private static bool _absoluteOverloadMissing;
-
     /// <summary>
-    /// The absolute outline where the platform has the overload (A87). Without it the outline is what the parameterless
-    /// overload returns, which on 2026 is relative to the owner; on 2025 that is not verified.
+    /// A87: <c>GetBoundingBox(false)</c> is absolute and the parameterless <c>GetBoundingBox()</c> is relative to the
+    /// owner. Before EPLAN 2026 the owner's location is added, as the location read does for the location; A87 verified
+    /// that sum on 2026.
     /// </summary>
     internal static PointD[] Of(PropertyPlacement placement)
     {
-        if (!_absoluteOverloadMissing)
-        {
-            try
-            {
-                return Absolute(placement);
-            }
-            catch (MissingMethodException)
-            {
-                // Thrown when the runtime compiles Absolute, before any of it runs; later calls skip the attempt.
-                _absoluteOverloadMissing = true;
-            }
-        }
-
-        return placement.GetBoundingBox();
+#if EPLAN2026_OR_GREATER
+        return placement.GetBoundingBox(false);
+#else
+        PointD origin = placement.Parent is global::Eplan.EplApi.DataModel.Placement owner ? owner.Location : new PointD(0, 0);
+        return [.. placement.GetBoundingBox().Select(corner => new PointD(corner.X + origin.X, corner.Y + origin.Y))];
+#endif
     }
-
-    /// <summary>Kept out of line so that a platform without the overload fails here and not in the caller.</summary>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static PointD[] Absolute(PropertyPlacement placement) => placement.GetBoundingBox(false);
 }

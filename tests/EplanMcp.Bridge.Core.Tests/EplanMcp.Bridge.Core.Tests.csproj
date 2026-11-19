@@ -1,4 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The linked adapters compile against the fake EPLAN API of this project, which follows the EPLAN 2026 API, so the
+    symbols are those eng/EplanApi.props defines for a 2026 build. That props file is not imported: it looks for an
+    EPLAN installation, which CI does not have.
+  -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);EPLAN2026;EPLAN2024_OR_GREATER;EPLAN2025_OR_GREATER;EPLAN2026_OR_GREATER</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\..\src\EplanMcp.Bridge.Eplan\Resources\potential-definition.ema" LogicalName="potential-definition.ema" />
     <Compile Include="..\Shared\PageExportComparer.cs" Link="PageExportComparer.cs" />
