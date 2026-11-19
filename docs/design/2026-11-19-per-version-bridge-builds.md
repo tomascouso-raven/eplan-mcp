@@ -112,4 +112,29 @@ Exit criterion: on a machine with EPLAN 2025, the Workbench registers the 2025 b
 
 ## 6. Results
 
-To be filled in as the phases complete.
+### Phase 0 (2026-11-19)
+
+- `catalog/eplan-2025.0.3/` extracted from EPLAN Platform 2025.0.3 with the existing extractor, unchanged.
+- New command `diff` in `eng/catalog/EplanMcp.Catalog` (tests in `CatalogDiffTests`): compares two catalog folders by documentation comment ID, after unfolding enum values and data dictionary properties into their `F:` IDs, and marks the IDs that `catalog/mapping/bridge-usage.json` lists. Output: `catalog/mapping/eplan-2026.0.3-vs-2025.0.3.g.tsv`.
+
+  ```powershell
+  dotnet run --project eng\catalog\EplanMcp.Catalog -c Release -- diff --base catalog\eplan-2026.0.3 --other catalog\eplan-2025.0.3 --usage catalog\mapping\bridge-usage.json --out catalog\mapping\eplan-2026.0.3-vs-2025.0.3.g.tsv
+  ```
+
+| Side | IDs | Used by the Bridge |
+|---|---:|---:|
+| Only in 2026.0.3 | 3,187 | 2,374 |
+| Only in 2025.0.3 | 96 | 0 |
+
+Of the 2,374 used IDs, 2,372 are used only by generated code (`ApiTryDispatch.g.cs`; one also by `ObjectKindDispatch.g.cs`). Four are used by hand-written code:
+
+| File | 2026-only member |
+|---|---|
+| `Adapters/Runtime/EplanPaths.cs` | `M:Eplan.EplApi.Base.PathMap.SubstitutePath(System.String,System.String)` |
+| `Adapters/Pages/EplanDrawingReader.Reading.cs` | `M:Eplan.EplApi.DataModel.Graphics.PropertyPlacement.GetBoundingBox(System.Boolean)` |
+| `Adapters/MasterData/EplanPartsDatabaseWriter.cs` | `F:Eplan.EplApi.MasterData.MDPartsDatabase.ImportMode.ReplaceAndAppend` |
+| `Adapters/Connections/EplanConnectionRouter.cs` | `P:Eplan.EplApi.DataModel.E3D.InstallationSpace.Connection3Ds` |
+
+The first three match the compiler errors of section 1. The fourth compiled against 2025, so the call binds to a member of the same name that 2025 has elsewhere in the hierarchy; to be confirmed in phase 3, since the bound member may behave differently.
+
+Nothing that only 2025 has is used, so the 2025 build needs no 2025-only code paths.
