@@ -90,9 +90,9 @@ release remain the maintainer's.
 | Step | Branch | Status |
 |---|---|---|
 | 0 | one branch per pull request from `origin/main` (`aaa0398c`) | done |
-| 1a | `fix/page-export-tests-culture` | pull request #665; rebased on `80faa802` (not pushed yet), gate green again (17,955 tests under es-ES). Besides the 5 `PageExportRoundFourTests`, two `Host.Tests` fakes formatted numbers with the current culture. |
-| 1b | `fix/install-addin-eplan-not-closed` | the maintainer chose both changes, the second as a list of harmless windows (#664 comment 7036431319, ADR-0063 proposed). Three local commits: window recognition, the closer closing the system messages window and `eplan_not_closed`, and api-notes A172. Gate running; live run on 2025 pending. |
-| 2 | `feat/catalog-eplan-2025` | pull request #666; rebased on `80faa802` (not pushed yet). The maintainer had added his own B19 (build 23406), so ours became B20; gate green except the 7 es-ES failures that #665 fixes |
+| 1a | `fix/page-export-tests-culture` | pull request #665, rebased on `80faa802` and force-pushed; gate green (17,955 tests under es-ES). Besides the 5 `PageExportRoundFourTests`, two `Host.Tests` fakes formatted numbers with the current culture. |
+| 1b | `fix/install-addin-eplan-not-closed` | pull request #667. The maintainer chose both changes, the second as a list of harmless windows (#664 comment 7036431319, ADR-0063 proposed). Gate green except the 7 es-ES failures that #665 fixes; live `install-addin` on 2025.0.3 registered over the 0.6.0 registration in 88 s. The 0.6.0 registration was restored afterwards. |
+| 2 | `feat/catalog-eplan-2025` | pull request #666, rebased on `80faa802` and force-pushed. The maintainer had added his own B19 (build 23406), so ours became B20; gate green except the 7 es-ES failures that #665 fixes |
 | 3 | — | waiting for ADR-0060 |
 | 4 | — | waiting for ADR-0060 |
 | 5 | — | waiting for ADR-0060 |
