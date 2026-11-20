@@ -170,3 +170,52 @@ Results:
 - `dotnet build src\EplanMcp.Bridge.Eplan -c Release -p:EplanVersion=2025`: succeeds with no warnings (warnings are errors in this repository).
 - `tests/EplanMcp.Bridge.Core.Tests`: 5,962 of 5,967 pass. The 5 failures are in `PageExportRoundFourTests` and come from the machine's culture (es-ES, decimal comma), not from this change: with `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1` all 30 tests of that class pass. A separate issue for the maintainer.
 - The default 2026 build is not compiled here (no EPLAN 2026 on this machine); the `#if EPLAN2026_OR_GREATER` branches are the previous code.
+
+### Phase 4 (2026-11-20)
+
+- The add-in builds to `bin\<configuration>\net481\eplan<year>\` (obj split the same way), set in `EplanMcp.Bridge.Eplan.csproj`. This is phase 1, step 3, moved here. The offline host and the Large helpers keep their output folders: they are development tools, and their paths are used by the Large tests and `release-addin.ps1`.
+- `AddinLocation.Find(hostDirectory, eplanVersion, out searched)` looks, in order, for the build of that EPLAN version and then for the single build of earlier releases, first in the installed layout (`<app>\bridge\net481\eplan<year>\`, then `<app>\bridge\net481\`), then in the development layout. It never falls back to another version's build. `AddinLocation.Any` tells whether any build is there at all.
+- `install-addin` (`AddinCommand.InstallAsync`) looks up the build per EPLAN installation. An installation whose version has no build is reported as refused with `AddinNotFound` and the paths looked at; the others are registered as before. The report's add-in path is the first build found. The not-found message names `eplan<year>` and `-p:EplanVersion`.
+- `eng/scripts/eplan-addin.ps1` (development registration) takes `-EplanVersion` (default 2026), picks the build in `eplan<year>` and, without `-EplanBin`, the single installation of that version. Parsed without errors; not run (no EPLAN 2026 here, and registering changes the engineer's EPLAN).
+- Tests: `AddinLocationTests` (per-version, single build, development, `Any`, `VersionFolder`) and `AddinCommandTests.Install_WithPerVersionBuilds_RegistersEachVersionsBuild_AndRefusesAVersionWithoutOne`; all 111 tests of `EplanMcp.Host.Tests.Addin` pass.
+
+Not done in this phase, on purpose:
+
+- **Release pipeline** (`eng/scripts/release-addin.ps1`, `eng/scripts/release-package.ps1`, `.github/workflows/release.yml`). Today one add-in ZIP per tag is built on the maintainer's EPLAN 2026 machine, its SHA-256 line goes into the draft notes, and the workflow checks a fixed five-entry allowlist and `eplanVersion == '2026'`. Per-version builds need one ZIP per EPLAN version (for example `EplanMcp-addin-<tag>-eplan<year>.zip` with `bridge/net481/eplan<year>/`), a hash line for each, a loop over the expected versions in both checks, and a machine with each EPLAN version for the tag build. That changes the maintainer's release and supply-chain checks, cannot be run here (no `pwsh`, no EPLAN 2026, no rights on the draft releases), and until it changes the released ZIP keeps the single-build layout, which `AddinLocation` still finds. Proposed to the maintainer instead of changed blind.
+- **Workbench and `doctor`** showing which build each version uses: `install-addin`'s report already names the DLL per registration in the record; the UI change is left for after the maintainer's decision on the layout.
+
+### Phase 5 (2026-11-20, EPLAN Electric P8 2025.0.3.23616)
+
+Setup: the add-in built from this branch with `-p:EplanVersion=2025` (`bin\Release\net481\eplan2025\`), the Host of this branch (`eplanmcp` 0.7.0), and a copy of EPLAN 2025's own `EPLAN_Sample_Project` made by `eng/scripts/eval-fixture.ps1` (322 pages, 504 devices, 2,060 connections). Tools were called over stdio.
+
+Registration:
+
+- `install-addin --variant "Electric P8"` picked the 2025 build (`...\net481\eplan2025\EplanMcp.Bridge.Eplan.dll`), as phase 4 intends.
+- It did not take: an earlier registration (the 0.6.0 release) loads at start-up, and EPLAN kept loading it. `install-addin` reported this ("EPLAN loaded the add-in from another path ... this one did not take"); the re-registration path of design 4.2 is still unverified, and on this machine it did not work either. A licence selection dialog at the first start also made the first attempt time out.
+- Done by hand instead: `EPLAN.exe /Variant:"Electric P8" EplApiModuleAction /unregister:"EplanMcp.Bridge.Eplan"`, close EPLAN, then `/register:"<2025 build>"`. `eplanmcp doctor` then reported `Handshake OK: add-in 0.7.0 ... EPLAN 2025.0.3.23616 (Electric P8)`.
+
+Results:
+
+| Check (asked for in #664 or from phase 3) | 0.6.0 on 2025 (#664) | This branch on 2025 |
+|---|---|---|
+| `eplan_page_get` with `include_drawings` on `=F+A2&EFS1/1` | `MissingMethodException` | Works: all 803 drawing items read through `nextCursor` |
+| Property text bounds (phase 3, `PropertyOutline`) | not reached | All 256 non-empty property texts have a box that contains their absolute location, at most 44.7 mm wide; the other 423 are empty texts with an all-zero box, which `4020e81a` intends |
+| `eplan_connection_create` dry run (t-node on `=F+A2&EFS1/1`) | failed in planning | Works: `not_started`, predicted symbol, 1 undo step |
+| `eplan_device_get` for each coil `eplan_device_list` prints with `category: "Coil"` | `DEVICE_NOT_FOUND` | All 9 found, including the nested `=EC1+A3-EC1-QA1-K1` |
+| `eplan_connection_list` by device `=F+A2-KF1` | `DEVICE_NOT_FOUND` | 6 connections |
+| `eplan_device_list` without filters | incomplete | 507 devices |
+| `eplan_connection_route` dry run, spaces A1 and A2 (`Connection3Ds`, phase 3) | not tested | **0 and 0 connections**; A141 measured 176 and 332 on the 2026 sample |
+
+The last row confirms the risk noted in phase 3: on 2025, `InstallationSpace.Connection3Ds` does not exist and the code binds to the inherited `Placement3D.Connection3Ds`, which does not list the space's connections.
+
+Fix (same day): `EplanConnectionRouter.Connections(space)` returns `space.Connection3Ds` on 2026 and later; before 2026 it walks the space and every 3D placement under it (`Placement3D.Children`, breadth first) and collects each placement's `Connection3Ds` once, by `ToStringIdentifier()`. Rebuilt for 2025 and run again on the same copy:
+
+| `eplan_connection_route` dry run | Before the fix | After | A141 on 2026 |
+|---|---:|---:|---:|
+| A1, all connections | 0 | 176 (176 routed) | 176 |
+| A2, all connections | 0 | 332 (332 routed) | 332 |
+| A1, only `=GAA+A1-FC1` | 0 | 9 | not measured |
+
+Routing itself (`dry_run: false`) was not run: it writes, and A141 already showed that three of A1's routes do not come back after clearing.
+
+Not checked live: the 2026 build (no EPLAN 2026 here), `replace_and_append` refusal (it writes the system parts database), and the Large test suite (its expectations are the 2026 sample's).

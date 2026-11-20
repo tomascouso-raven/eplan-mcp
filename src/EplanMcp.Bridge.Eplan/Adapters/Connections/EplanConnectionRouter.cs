@@ -12,9 +12,10 @@ namespace EplanMcp.Bridge.Eplan.Adapters;
 /// A141): <c>InstallationSpace.Connection3Ds</c>, path lengths from <c>RoutePoints</c>, and
 /// <c>ConnectionService3D.RouteConnections</c>, which gave the sample's lengths again. Main thread.
 /// <para>
-/// EPLAN 2025 has no <c>InstallationSpace.Connection3Ds</c> (catalog/eplan-2025.0.3): built for 2025, the same code
-/// binds to the inherited <c>Placement3D.Connection3Ds</c>, which may list only the space's own connections. Not
-/// verified live on 2025 (docs/design/2026-11-19-per-version-bridge-builds.md, phase 5).
+/// EPLAN 2025 has no <c>InstallationSpace.Connection3Ds</c> (catalog/eplan-2025.0.3), and the inherited
+/// <c>Placement3D.Connection3Ds</c> of the space listed none of the sample's connections (live 2026-11-20, 0 against
+/// A141's 176 and 332). There <see cref="Connections"/> collects them from the space and every 3D placement under it
+/// (docs/design/2026-11-19-per-version-bridge-builds.md, phase 5).
 /// </para>
 /// </summary>
 internal sealed class EplanConnectionRouter : IConnectionRouter
@@ -23,18 +24,46 @@ internal sealed class EplanConnectionRouter : IConnectionRouter
     {
         MainThread.Assert();
         InstallationSpace? target = Space(projectPath, space);
-        return target is null ? null : [.. target.Connection3Ds.Select(Describe)];
+        return target is null ? null : [.. Connections(target).Select(Describe)];
     }
 
     public void Route(string projectPath, string space, IReadOnlyCollection<string> devices, bool network)
     {
         MainThread.Assert();
         InstallationSpace target = Space(projectPath, space) ?? throw new InvalidOperationException("No installation space " + space + ".");
-        List<Connection3D> selected = [.. target.Connection3Ds.Where(c => devices.Count == 0 || devices.Contains(Device(c, start: true)) || devices.Contains(Device(c, start: false)))];
+        List<Connection3D> selected = [.. Connections(target).Where(c => devices.Count == 0 || devices.Contains(Device(c, start: true)) || devices.Contains(Device(c, start: false)))];
         if (selected.Count == 0)
         { return; }
         using var service = new ConnectionService3D();
         service.RouteConnections(selected, network ? Connection3D.Enums.RoutingType.RoutingWithNetwork : Connection3D.Enums.RoutingType.RoutingWithoutNetwork);
+    }
+
+    /// <summary>The 3D connections of one installation space.</summary>
+    private static Connection3D[] Connections(InstallationSpace space)
+    {
+#if EPLAN2026_OR_GREATER
+        return space.Connection3Ds;
+#else
+        // Breadth first from the space, each connection once (a connection hangs on both of its end placements).
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var connections = new List<Connection3D>();
+        var queue = new Queue<Placement3D>();
+        queue.Enqueue(space);
+        while (queue.Count > 0)
+        {
+            Placement3D placement = queue.Dequeue();
+            foreach (Connection3D connection in placement.Connection3Ds ?? [])
+            {
+                if (seen.Add(connection.ToStringIdentifier()))
+                { connections.Add(connection); }
+            }
+
+            foreach (Placement3D child in placement.Children ?? [])
+            { queue.Enqueue(child); }
+        }
+
+        return [.. connections];
+#endif
     }
 
     private static InstallationSpace? Space(string projectPath, string space) =>
