@@ -90,9 +90,9 @@ release remain the maintainer's.
 | Step | Branch | Status |
 |---|---|---|
 | 0 | one branch per pull request from `origin/main` (`aaa0398c`) | done |
-| 1a | `fix/page-export-tests-culture` | committed, gate green (17,706 tests under es-ES); not pushed. Besides the 5 `PageExportRoundFourTests`, two `Host.Tests` fakes formatted numbers with the current culture. |
+| 1a | `fix/page-export-tests-culture` | pull request #665; gate green (17,706 tests under es-ES). Besides the 5 `PageExportRoundFourTests`, two `Host.Tests` fakes formatted numbers with the current culture. |
 | 1b | — | diagnosed and reported on #664 (comment 7035131420): a system messages window opened at start-up keeps EPLAN from closing, and the command reports it as `PathMismatch`. Waiting for the maintainer's choice between a clearer report and closing EPLAN's secondary windows. |
-| 2 | `feat/catalog-eplan-2025` | committed (catalog, `diff` command, regenerated mapping, api-notes B19); gate running; not pushed |
+| 2 | `feat/catalog-eplan-2025` | pull request #666 (catalog, `diff` command, regenerated mapping, api-notes B19); gate green except the 7 es-ES failures that #665 fixes |
 | 3 | — | waiting for ADR-0060 |
 | 4 | — | waiting for ADR-0060 |
 | 5 | — | waiting for ADR-0060 |
