@@ -206,6 +206,16 @@ Results:
 | `eplan_device_list` without filters | incomplete | 507 devices |
 | `eplan_connection_route` dry run, spaces A1 and A2 (`Connection3Ds`, phase 3) | not tested | **0 and 0 connections**; A141 measured 176 and 332 on the 2026 sample |
 
-The last row confirms the risk noted in phase 3: on 2025, `InstallationSpace.Connection3Ds` does not exist and the code binds to the inherited `Placement3D.Connection3Ds`, which does not list the space's connections. Proposed fix, not done yet: on 2025, collect the connections from the space's 3D placements (or from `Connection.Connection3D` of the project's connections filtered by space), and check the count against 176 / 332. Until then, on 2025 `eplan_connection_route` finds nothing to route; it changes nothing, so it fails safe.
+The last row confirms the risk noted in phase 3: on 2025, `InstallationSpace.Connection3Ds` does not exist and the code binds to the inherited `Placement3D.Connection3Ds`, which does not list the space's connections.
+
+Fix (same day): `EplanConnectionRouter.Connections(space)` returns `space.Connection3Ds` on 2026 and later; before 2026 it walks the space and every 3D placement under it (`Placement3D.Children`, breadth first) and collects each placement's `Connection3Ds` once, by `ToStringIdentifier()`. Rebuilt for 2025 and run again on the same copy:
+
+| `eplan_connection_route` dry run | Before the fix | After | A141 on 2026 |
+|---|---:|---:|---:|
+| A1, all connections | 0 | 176 (176 routed) | 176 |
+| A2, all connections | 0 | 332 (332 routed) | 332 |
+| A1, only `=GAA+A1-FC1` | 0 | 9 | not measured |
+
+Routing itself (`dry_run: false`) was not run: it writes, and A141 already showed that three of A1's routes do not come back after clearing.
 
 Not checked live: the 2026 build (no EPLAN 2026 here), `replace_and_append` refusal (it writes the system parts database), and the Large test suite (its expectations are the 2026 sample's).
