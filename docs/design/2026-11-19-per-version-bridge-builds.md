@@ -183,3 +183,29 @@ Not done in this phase, on purpose:
 
 - **Release pipeline** (`eng/scripts/release-addin.ps1`, `eng/scripts/release-package.ps1`, `.github/workflows/release.yml`). Today one add-in ZIP per tag is built on the maintainer's EPLAN 2026 machine, its SHA-256 line goes into the draft notes, and the workflow checks a fixed five-entry allowlist and `eplanVersion == '2026'`. Per-version builds need one ZIP per EPLAN version (for example `EplanMcp-addin-<tag>-eplan<year>.zip` with `bridge/net481/eplan<year>/`), a hash line for each, a loop over the expected versions in both checks, and a machine with each EPLAN version for the tag build. That changes the maintainer's release and supply-chain checks, cannot be run here (no `pwsh`, no EPLAN 2026, no rights on the draft releases), and until it changes the released ZIP keeps the single-build layout, which `AddinLocation` still finds. Proposed to the maintainer instead of changed blind.
 - **Workbench and `doctor`** showing which build each version uses: `install-addin`'s report already names the DLL per registration in the record; the UI change is left for after the maintainer's decision on the layout.
+
+### Phase 5 (2026-11-20, EPLAN Electric P8 2025.0.3.23616)
+
+Setup: the add-in built from this branch with `-p:EplanVersion=2025` (`bin\Release\net481\eplan2025\`), the Host of this branch (`eplanmcp` 0.7.0), and a copy of EPLAN 2025's own `EPLAN_Sample_Project` made by `eng/scripts/eval-fixture.ps1` (322 pages, 504 devices, 2,060 connections). Tools were called over stdio.
+
+Registration:
+
+- `install-addin --variant "Electric P8"` picked the 2025 build (`...\net481\eplan2025\EplanMcp.Bridge.Eplan.dll`), as phase 4 intends.
+- It did not take: an earlier registration (the 0.6.0 release) loads at start-up, and EPLAN kept loading it. `install-addin` reported this ("EPLAN loaded the add-in from another path ... this one did not take"); the re-registration path of design 4.2 is still unverified, and on this machine it did not work either. A licence selection dialog at the first start also made the first attempt time out.
+- Done by hand instead: `EPLAN.exe /Variant:"Electric P8" EplApiModuleAction /unregister:"EplanMcp.Bridge.Eplan"`, close EPLAN, then `/register:"<2025 build>"`. `eplanmcp doctor` then reported `Handshake OK: add-in 0.7.0 ... EPLAN 2025.0.3.23616 (Electric P8)`.
+
+Results:
+
+| Check (asked for in #664 or from phase 3) | 0.6.0 on 2025 (#664) | This branch on 2025 |
+|---|---|---|
+| `eplan_page_get` with `include_drawings` on `=F+A2&EFS1/1` | `MissingMethodException` | Works: all 803 drawing items read through `nextCursor` |
+| Property text bounds (phase 3, `PropertyOutline`) | not reached | All 256 non-empty property texts have a box that contains their absolute location, at most 44.7 mm wide; the other 423 are empty texts with an all-zero box, which `4020e81a` intends |
+| `eplan_connection_create` dry run (t-node on `=F+A2&EFS1/1`) | failed in planning | Works: `not_started`, predicted symbol, 1 undo step |
+| `eplan_device_get` for each coil `eplan_device_list` prints with `category: "Coil"` | `DEVICE_NOT_FOUND` | All 9 found, including the nested `=EC1+A3-EC1-QA1-K1` |
+| `eplan_connection_list` by device `=F+A2-KF1` | `DEVICE_NOT_FOUND` | 6 connections |
+| `eplan_device_list` without filters | incomplete | 507 devices |
+| `eplan_connection_route` dry run, spaces A1 and A2 (`Connection3Ds`, phase 3) | not tested | **0 and 0 connections**; A141 measured 176 and 332 on the 2026 sample |
+
+The last row confirms the risk noted in phase 3: on 2025, `InstallationSpace.Connection3Ds` does not exist and the code binds to the inherited `Placement3D.Connection3Ds`, which does not list the space's connections. Proposed fix, not done yet: on 2025, collect the connections from the space's 3D placements (or from `Connection.Connection3D` of the project's connections filtered by space), and check the count against 176 / 332. Until then, on 2025 `eplan_connection_route` finds nothing to route; it changes nothing, so it fails safe.
+
+Not checked live: the 2026 build (no EPLAN 2026 here), `replace_and_append` refusal (it writes the system parts database), and the Large test suite (its expectations are the 2026 sample's).
